@@ -9,7 +9,7 @@ const PadelAmericano = () => {
     const [currentRound, setCurrentRound] = useState(0);
     const [leaderboard, setLeaderboard] = useState([]);
 
-    // Timer states
+    // Timer states - ahora por ronda
     const [timerMinutes, setTimerMinutes] = useState(15);
     const [timerSeconds, setTimerSeconds] = useState(0);
     const [isTimerRunning, setIsTimerRunning] = useState(false);
@@ -93,23 +93,23 @@ const PadelAmericano = () => {
         }
     };
 
-    // Timer effect
+    // Timer effect - CORREGIDO para evitar negativos
     useEffect(() => {
         if (isTimerRunning && !isTimerPaused && !timerFinished) {
             const interval = setInterval(() => {
                 setTimerSeconds(prevSeconds => {
                     if (prevSeconds === 0) {
                         if (timerMinutes === 0) {
-                            // Timer finished
+                            // Timer finished - NO permitir negativos
                             startRepeatingBeep();
                             setIsTimerRunning(false);
                             return 0;
                         } else {
-                            setTimerMinutes(prevMinutes => prevMinutes - 1);
+                            setTimerMinutes(prevMinutes => Math.max(0, prevMinutes - 1));
                             return 59;
                         }
                     }
-                    return prevSeconds - 1;
+                    return Math.max(0, prevSeconds - 1);
                 });
             }, 1000);
             setTimerInterval(interval);
@@ -119,7 +119,7 @@ const PadelAmericano = () => {
                 setTimerInterval(null);
             };
         }
-    }, [isTimerRunning, isTimerPaused, timerFinished]);
+    }, [isTimerRunning, isTimerPaused, timerFinished, timerMinutes]);
 
     const pauseTimer = () => {
         if (isTimerRunning) {
@@ -166,6 +166,15 @@ const PadelAmericano = () => {
             clearAllTimers();
         };
     }, [stage]);
+
+    // Reset timer when changing rounds
+    useEffect(() => {
+        if (stage === 'playing') {
+            clearAllTimers();
+            setTimerSeconds(originalSeconds);
+            setTimerMinutes(originalMinutes);
+        }
+    }, [currentRound, originalMinutes, originalSeconds]);
 
     const addPlayer = () => {
         setPlayers([...players, '']);
@@ -336,12 +345,20 @@ const PadelAmericano = () => {
 
     const nextRound = () => {
         if (currentRound < rounds.length - 1) {
+            // Reset timer for new round
+            clearAllTimers();
+            setTimerSeconds(originalSeconds);
+            setTimerMinutes(originalMinutes);
             setCurrentRound(currentRound + 1);
         }
     };
 
     const prevRound = () => {
         if (currentRound > 0) {
+            // Reset timer for previous round
+            clearAllTimers();
+            setTimerSeconds(originalSeconds);
+            setTimerMinutes(originalMinutes);
             setCurrentRound(currentRound - 1);
         }
     };
@@ -475,11 +492,11 @@ const PadelAmericano = () => {
                                         </label>
                                         <input
                                             type="number"
-                                            min="1"
+                                            min="0"
                                             max="60"
                                             value={timerMinutes}
                                             onChange={(e) => {
-                                                const value = parseInt(e.target.value) || 15;
+                                                const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
                                                 setTimerMinutes(value);
                                                 setOriginalMinutes(value);
                                             }}
@@ -497,7 +514,7 @@ const PadelAmericano = () => {
                                             max="59"
                                             value={timerSeconds}
                                             onChange={(e) => {
-                                                const value = parseInt(e.target.value) || 0;
+                                                const value = e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
                                                 setTimerSeconds(value);
                                                 setOriginalSeconds(value);
                                             }}
